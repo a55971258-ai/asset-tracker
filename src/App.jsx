@@ -74,14 +74,20 @@ function sbSignOut(url, key, token) {
 }
 function sbUpload(url, key, token, userId, data) {
   var base = sbCleanUrl(url);
-  // upsert: uid + data (table columns are uid, data, updated_at)
+  // Use auth.uid() via RLS - don't send uid in body, let Supabase get it from JWT
+  var payload = {data: data, updated_at: new Date().toISOString()};
+  if (userId) payload.uid = userId;
   return fetch(base+"/rest/v1/snapshots?on_conflict=uid", {
     method:"POST",
-    headers:Object.assign({},sbHeaders(key,token),{"Prefer":"resolution=merge-duplicates"}),
-    body:JSON.stringify({uid:userId, data:data, updated_at:new Date().toISOString()})
+    headers:Object.assign({},sbHeaders(key,token),{"Prefer":"resolution=merge-duplicates","Content-Type":"application/json"}),
+    body:JSON.stringify(payload)
   }).then(function(r){
     if (!r.ok) {
-      return r.text().then(function(t){console.error("upload error:",t);return false;});
+      return r.text().then(function(t){
+        console.error("upload error:",t);
+        alert("上傳錯誤: "+t);
+        return false;
+      });
     }
     return true;
   });

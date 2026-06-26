@@ -75,7 +75,7 @@ function sbSignOut(url, key, token) {
 function sbUpload(url, key, token, userId, data) {
   var base = sbCleanUrl(url);
   // upsert: uid + data (table columns are uid, data, updated_at)
-  return fetch(base+"/rest/v1/Snapshots?on_conflict=uid", {
+  return fetch(base+"/rest/v1/snapshots?on_conflict=uid", {
     method:"POST",
     headers:Object.assign({},sbHeaders(key,token),{"Prefer":"resolution=merge-duplicates"}),
     body:JSON.stringify({uid:userId, data:data, updated_at:new Date().toISOString()})
@@ -88,7 +88,7 @@ function sbUpload(url, key, token, userId, data) {
 }
 function sbDownload(url, key, token) {
   var base = sbCleanUrl(url);
-  return fetch(base+"/rest/v1/Snapshots?select=data,updated_at&limit=1", {
+  return fetch(base+"/rest/v1/snapshots?select=data,updated_at&limit=1", {
     headers:sbHeaders(key,token)
   }).then(function(r){return r.ok?r.json():[];})
   .then(function(rows){return rows&&rows.length>0?rows[0]:null;});

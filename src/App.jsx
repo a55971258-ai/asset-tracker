@@ -588,8 +588,26 @@ function HomePage(props) {
 var _stockCache = {};
 
 // 查名稱：用 TWSE/TPEx OpenAPI（昨收，CORS OK）
-// 台股名稱查詢：用單一股票 API，速度快
+// 台股名稱查詢 - 用 STOCK_DAY_AVG_ALL（有名稱，下載一次後快取）
 var _stockCache = {};
+var _twseAllList = null;
+var _twseAllTs = 0;
+
+function _getTwseAll() {
+  if (_twseAllList && Date.now()-_twseAllTs < 3600000*6) {
+    return Promise.resolve(_twseAllList);
+  }
+  return fetch("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL")
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(list){
+      if (list && list.length > 0) {
+        _twseAllList = list;
+        _twseAllTs = Date.now();
+      }
+      return _twseAllList || [];
+    })
+    .catch(function(){ return _twseAllList || []; });
+}
 
 function fetchByCode(code) {
   var q = (code||"").trim(); if (!q) return Promise.resolve(null);
@@ -597,41 +615,26 @@ function fetchByCode(code) {
   if (_stockCache[cacheKey] && Date.now()-_stockCache[cacheKey].ts<3600000) {
     return Promise.resolve(_stockCache[cacheKey].data);
   }
-  // 上市：用個股日成交資訊（快速，只回傳一支股票）
-  var today = new Date();
-  var mm = String(today.getMonth()+1).padStart(2,"0");
-  var dd = String(today.getDate()).padStart(2,"0");
-  var dateStr = today.getFullYear()+""+mm+""+dd;
-  var url = "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&stockNo="+q+"&date="+dateStr;
-  return fetch(url)
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(data){
-      // data.data 是陣列，data.title 含股票名稱
-      if (data && data.stat==="OK" && data.title) {
-        // title 格式: "xxx 台積電 普通股日成交資訊"
-        var parts = data.title.split(" ");
-        var name = parts.length>=2 ? parts[1] : q;
-        var lastRow = data.data && data.data[data.data.length-1];
-        var price = lastRow ? parseFloat((lastRow[6]||"").replace(/,/g,"")) : 0;
-        var result = {name:name, code:q, price:price||0};
-        _stockCache[cacheKey] = {data:result, ts:Date.now()};
-        return result;
-      }
-      // 上市查不到，試上櫃
-      return fetch("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
-        .then(function(r2){ return r2.ok ? r2.json() : []; })
-        .then(function(list){
-          var found = null;
-          list.forEach(function(item){
-            if (item.SecuritiesCompanyCode===q) found=item;
-          });
-          if (!found) return null;
-          var result2 = {name:found.CompanyAbbreviation||q, code:q, price:parseFloat(found.Close)||0};
-          _stockCache[cacheKey] = {data:result2, ts:Date.now()};
-          return result2;
-        });
-    })
-    .catch(function(){ return null; });
+  return _getTwseAll().then(function(list){
+    var found = null;
+    list.forEach(function(item){ if (item.Code===q) found=item; });
+    if (found) {
+      var r = {name:found.Name, code:q, price:parseFloat(found.ClosingPrice)||0};
+      _stockCache[cacheKey] = {data:r, ts:Date.now()};
+      return r;
+    }
+    // 試上櫃
+    return fetch("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
+      .then(function(r2){ return r2.ok ? r2.json() : []; })
+      .then(function(list2){
+        var found2 = null;
+        list2.forEach(function(item){ if (item.SecuritiesCompanyCode===q) found2=item; });
+        if (!found2) return null;
+        var r2 = {name:found2.CompanyAbbreviation||q, code:q, price:parseFloat(found2.Close)||0};
+        _stockCache[cacheKey] = {data:r2, ts:Date.now()};
+        return r2;
+      });
+  }).catch(function(){ return null; });
 }
 
 function fetchByName(name) {
@@ -640,33 +643,29 @@ function fetchByName(name) {
   if (_stockCache[cacheKey] && Date.now()-_stockCache[cacheKey].ts<3600000) {
     return Promise.resolve(_stockCache[cacheKey].data);
   }
-  // 名稱查詢還是用全量列表（上市）
-  return fetch("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL")
-    .then(function(r){ return r.ok ? r.json() : []; })
-    .then(function(list){
-      var found = null;
-      list.forEach(function(item){
-        if (!found && item.Name && item.Name.indexOf(q)>=0) found=item;
-      });
-      if (found) {
-        var result = {name:found.Name, code:found.Code, price:parseFloat(found.ClosingPrice)||0};
-        _stockCache[cacheKey] = {data:result, ts:Date.now()};
-        return result;
-      }
-      return fetch("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
-        .then(function(r2){ return r2.ok ? r2.json() : []; })
-        .then(function(list2){
-          var found2 = null;
-          list2.forEach(function(item){
-            if (!found2 && item.CompanyAbbreviation && item.CompanyAbbreviation.indexOf(q)>=0) found2=item;
-          });
-          if (!found2) return null;
-          var result2 = {name:found2.CompanyAbbreviation, code:found2.SecuritiesCompanyCode, price:parseFloat(found2.Close)||0};
-          _stockCache[cacheKey] = {data:result2, ts:Date.now()};
-          return result2;
+  return _getTwseAll().then(function(list){
+    var found = null;
+    list.forEach(function(item){
+      if (!found && item.Name && item.Name.indexOf(q)>=0) found=item;
+    });
+    if (found) {
+      var r = {name:found.Name, code:found.Code, price:parseFloat(found.ClosingPrice)||0};
+      _stockCache[cacheKey] = {data:r, ts:Date.now()};
+      return r;
+    }
+    return fetch("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
+      .then(function(r2){ return r2.ok ? r2.json() : []; })
+      .then(function(list2){
+        var found2 = null;
+        list2.forEach(function(item){
+          if (!found2 && item.CompanyAbbreviation && item.CompanyAbbreviation.indexOf(q)>=0) found2=item;
         });
-    })
-    .catch(function(){ return null; });
+        if (!found2) return null;
+        var r2 = {name:found2.CompanyAbbreviation, code:found2.SecuritiesCompanyCode, price:parseFloat(found2.Close)||0};
+        _stockCache[cacheKey] = {data:r2, ts:Date.now()};
+        return r2;
+      });
+  }).catch(function(){ return null; });
 }
 
 

@@ -923,8 +923,23 @@ function TwStocksPage(props) {
     <Shell title="台股持倉" sub={"市值合計：$"+numFmt(cashTotal+marginTotal)} onSave={handleSave}>
       <Card style={{background:t.primary+"12",border:"1px solid "+t.primary+"33",marginBottom:4}}>
         <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-          <p style={{fontSize:12,color:t.muted,margin:0}}>{updAt?"股價更新："+updAt:"離開代號欄位自動帶入名稱，輸入名稱可帶入代號"}</p>
-          <Btn onClick={fetchAll} disabled={fetchingAll} size="sm"><RefreshCw size={13}/>{fetchingAll?"查詢中…":"全部更新"}</Btn>
+          <p style={{fontSize:12,color:t.muted,margin:0}}>{updAt?"名稱更新："+updAt:"輸入代號後離開欄位自動帶入名稱"}</p>
+          <div style={{display:"flex",gap:6}}>
+            <Btn onClick={function(){
+              setFetchingAll(true);
+              fetch("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL")
+                .then(function(r){return r.json();})
+                .then(function(list){
+                  showToast("API OK - "+list.length+"筆","success");
+                  setFetchingAll(false);
+                })
+                .catch(function(e){
+                  showToast("API失敗:"+e.message,"error");
+                  setFetchingAll(false);
+                });
+            }} size="sm" variant="outline">測試</Btn>
+            <Btn onClick={fetchAll} disabled={fetchingAll} size="sm"><RefreshCw size={13}/>{fetchingAll?"查詢中…":"全部帶入"}</Btn>
+          </div>
         </div>
       </Card>
       <div style={{display:"flex",background:t.surface,borderRadius:10,padding:4,marginBottom:12}}>

@@ -7,15 +7,67 @@ const LightTheme = { bg:"#f0f2f9", surface:"#ffffff", card:"#ffffff", border:"#d
 const ThemeCtx = createContext(DarkTheme);
 const useTheme = function() { return useContext(ThemeCtx); };
 
+function resolveTheme(prefs) {
+  var p = prefs && prefs.themePreset;
+  // 莫蘭迪系列（淡色系）
+  if (p==="morandi1") return { bg:"#f2ede8", surface:"#faf7f4", card:"#ffffff", border:"#ddd5cc", text:"#3d3530", muted:"#9c8f87", primary:"#a07865", accent:"#c4956a", success:"#7aab8a", danger:"#c47a72" };
+  if (p==="morandi2") return { bg:"#e8ecf0", surface:"#f4f6f8", card:"#ffffff", border:"#c8d0d8", text:"#2c3540", muted:"#7a8c9c", primary:"#5a7fa0", accent:"#7aa0b8", success:"#6aab8a", danger:"#b87070" };
+  if (p==="morandi3") return { bg:"#f0e8e8", surface:"#f8f2f2", card:"#ffffff", border:"#dcc8c8", text:"#3a2c2c", muted:"#9c8080", primary:"#a06070", accent:"#c48080", success:"#7aab8a", danger:"#c47070" };
+  if (p==="morandi4") return { bg:"#e8ede8", surface:"#f4f7f4", card:"#ffffff", border:"#c8d4c8", text:"#2c3830", muted:"#7a9080", primary:"#5a8870", accent:"#8aa870", success:"#6aab7a", danger:"#b87060" };
+  if (p==="morandi5") return { bg:"#eceaf2", surface:"#f6f4fa", card:"#ffffff", border:"#d0cce0", text:"#302c40", muted:"#8880a0", primary:"#7068a8", accent:"#9888c0", success:"#6aab8a", danger:"#b87080" };
+  // 淺色
+  if (p==="light")    return { bg:"#f5f5f5", surface:"#ffffff",  card:"#ffffff", border:"#e0e0e0", text:"#1a1a2e", muted:"#757575", primary:"#5c6bc0", accent:"#ff8a65", success:"#4caf50", danger:"#ef5350" };
+  // 彩色系列
+  if (p==="candy")    return { bg:"#1a0a2e", surface:"#2d1654", card:"#3d2070", border:"#5a30a0", text:"#f0e0ff", muted:"#b090d0", primary:"#c060ff", accent:"#ff60c0", success:"#60ffb0", danger:"#ff6060" };
+  if (p==="sunset")   return { bg:"#1a0808", surface:"#2e1010", card:"#3d1818", border:"#6030208", text:"#ffe8d0", muted:"#d09070", primary:"#ff7040", accent:"#ffb040", success:"#60d080", danger:"#ff4060" };
+  if (p==="teal")     return { bg:"#041c1c", surface:"#062e2e", card:"#083a3a", border:"#0d5555", text:"#d0f5f0", muted:"#60b0a8", primary:"#00d4c0", accent:"#00ff88", success:"#00ff88", danger:"#ff4060" };
+  if (p==="royal")    return { bg:"#0a0818", surface:"#120e28", card:"#1a1538", border:"#2a2255", text:"#e0d8ff", muted:"#8878c0", primary:"#8060ff", accent:"#e060ff", success:"#60d880", danger:"#ff5060" };
+  // 螢光暗色系列
+  if (p==="neon")     return { bg:"#050510", surface:"#0a0a1e", card:"#0f0f28", border:"#1e1e50", text:"#e0e0ff", muted:"#6060a0", primary:"#00ffff", accent:"#ff00ff", success:"#00ff80", danger:"#ff0050" };
+  if (p==="matrix")   return { bg:"#000800", surface:"#001200", card:"#001a00", border:"#003300", text:"#00ff41", muted:"#00802a", primary:"#00ff41", accent:"#39ff14", success:"#00ff41", danger:"#ff0030" };
+  if (p==="cyber")    return { bg:"#080010", surface:"#100020", card:"#180030", border:"#300060", text:"#f0e0ff", muted:"#8040c0", primary:"#ff0099", accent:"#ffcc00", success:"#00ff99", danger:"#ff3300" };
+  // 預設深色
+  return { bg:"#0f1117", surface:"#181c27", card:"#1e2235", border:"#2a3050", text:"#e8eaf6", muted:"#7b82a3", primary:"#7c9ef0", accent:"#c4a44e", success:"#4ade80", danger:"#f87171" };
+}
+
+// 主題配色板：每個主題有自己的類別顏色陣列（順序對應 BUILT_IN）
+function getThemePalette(preset) {
+  var p = preset || "dark";
+  // [台股, 美股, 一戶通, 黃金, 銀行, 現金, 高利貸]
+  if (p==="light")    return ["#5c6bc0","#42a5f5","#26c6da","#ffb300","#66bb6a","#ab47bc","#ef5350"];
+  if (p==="morandi1") return ["#a07865","#c4956a","#8a9e78","#c4a87a","#7a9e8a","#b08878","#c47a72"];
+  if (p==="morandi2") return ["#5a7fa0","#7aa0b8","#5a9090","#8090a8","#6a9878","#8880a0","#a07880"];
+  if (p==="morandi3") return ["#a06070","#c48080","#907080","#b09070","#708070","#9870a0","#c07060"];
+  if (p==="morandi4") return ["#5a8870","#8aa870","#6a9890","#a09858","#609870","#8880a0","#b87860"];
+  if (p==="morandi5") return ["#7068a8","#9888c0","#6888b0","#a090a8","#6898a0","#a070a0","#b07080"];
+  if (p==="candy")    return ["#c060ff","#ff60c0","#60c0ff","#ffcc00","#60ffb0","#ff9060","#ff6060"];
+  if (p==="sunset")   return ["#ff7040","#ffb040","#ff5080","#ffd040","#40d090","#ff8090","#ff4060"];
+  if (p==="teal")     return ["#00d4c0","#00ff88","#00c0ff","#80ff40","#40d0c0","#00ffcc","#ff6080"];
+  if (p==="royal")    return ["#8060ff","#e060ff","#60a0ff","#c080ff","#60d880","#a060e0","#ff5060"];
+  if (p==="neon")     return ["#00ffff","#ff00ff","#00ff80","#ffff00","#ff8000","#0080ff","#ff0050"];
+  if (p==="matrix")   return ["#00ff41","#39ff14","#00cc33","#80ff00","#00ff80","#00dd22","#ff3300"];
+  if (p==="cyber")    return ["#ff0099","#ffcc00","#00ff99","#ff6600","#00ccff","#ff0066","#ffff00"];
+  // default dark
+  return ["#c4a44e","#5b9bd5","#3a7fc1","#d4a843","#6bb38a","#9b7ed8","#e87c6f"];
+}
+
 const BUILT_IN = [
-  { key:"twStocksTotal",  label:"台股",   color:"#c4a44e", route:"tw-stocks",  Icon:TrendingUp },
-  { key:"usStocksTotal",  label:"美股",   color:"#5b9bd5", route:"us-stocks",  Icon:DollarSign },
-  { key:"usAccountTotal", label:"一戶通", color:"#3a7fc1", route:"us-account", Icon:Landmark },
-  { key:"goldTotal",      label:"黃金",   color:"#d4a843", route:"gold",       Icon:Coins },
-  { key:"banksTotal",     label:"銀行存款",color:"#6bb38a", route:"banks",     Icon:Landmark },
-  { key:"cashTotal",      label:"現金",   color:"#9b7ed8", route:"cash",       Icon:Wallet },
-  { key:"loansTotal",     label:"高利貸", color:"#e87c6f", route:"loans",      Icon:HandCoins },
+  { key:"twStocksTotal",  label:"台股",    route:"tw-stocks",  Icon:TrendingUp },
+  { key:"usStocksTotal",  label:"美股",    route:"us-stocks",  Icon:DollarSign },
+  { key:"usAccountTotal", label:"一戶通",  route:"us-account", Icon:Landmark },
+  { key:"goldTotal",      label:"黃金",    route:"gold",       Icon:Coins },
+  { key:"banksTotal",     label:"銀行存款", route:"banks",     Icon:Landmark },
+  { key:"cashTotal",      label:"現金",    route:"cash",       Icon:Wallet },
+  { key:"loansTotal",     label:"高利貸",  route:"loans",      Icon:HandCoins },
 ];
+
+// Helper: get color for a BUILT_IN key based on current theme
+function getBuiltInColor(key, themePreset) {
+  var palette = getThemePalette(themePreset);
+  var idx = -1; BUILT_IN.forEach(function(c,i){ if(c.key===key) idx=i; });
+  if (idx>=0) return palette[idx] || palette[0];
+  return palette[0];
+}
 
 const STORE_KEY   = "asset_tracker_v4";
 const PIN_KEY     = "asset_pin_v4";
@@ -111,7 +163,7 @@ function loadPrefs() {
     var p = JSON.parse(localStorage.getItem(PREF_KEY)||"null");
     if (p) return p;
   } catch(e) {}
-  return { isDark:true, order:BUILT_IN.map(function(c){return c.key;}), hidden:[] };
+  return { isDark:true, themePreset:"dark", order:BUILT_IN.map(function(c){return c.key;}), hidden:[], hideTotal:false };
 }
 function savePrefs(p) { try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch(e) {} }
 
@@ -298,7 +350,10 @@ function PinScreen(props) {
           <div style={{padding:24,display:"flex",flexDirection:"column",gap:16}}>
             {!isSetup && (
               <div style={{position:"relative"}}>
-                <Inp label="PIN 碼" type={inputType} value={pin} onChange={function(e){setPin(e.target.value);}} placeholder="輸入 PIN"/>
+                <Inp label="PIN 碼" type={inputType} value={pin} onChange={function(e){
+                  var val=e.target.value; setPin(val);
+                  if(val===loadPin()){props.onUnlock();}
+                }} placeholder="輸入 PIN"/>
                 <button onClick={function(){setShow(!show);}} style={{position:"absolute",right:10,bottom:8,background:"none",border:"none",color:t.muted,cursor:"pointer",display:"flex",alignItems:"center",padding:2}}>
                   {show ? <EyeOff size={16}/> : <Eye size={16}/>}
                 </button>
@@ -350,11 +405,11 @@ function HomePage(props) {
 
   function getCat(key) {
     var b = BUILT_IN.find(function(c){return c.key===key;});
-    if (b) return b;
+    if (b) return Object.assign({},b,{color:getBuiltInColor(key, prefs.themePreset)});
     var id = key.replace("custom_","");
     var cc = (customCats||[]).find(function(c){return c.id===id;});
     if (!cc) return null;
-    return { key:key, label:cc.label, color:cc.color||"#7c9ef0", route:key, Icon:BarChart2 };
+    return { key:key, label:cc.label, color:cc.color||t.primary, route:key, Icon:BarChart2 };
   }
 
   function getVal(key) {
@@ -421,11 +476,16 @@ function HomePage(props) {
   var RADIAN = Math.PI/180;
   function renderLabel(labelProps) {
     var cx=labelProps.cx,cy=labelProps.cy,midAngle=labelProps.midAngle,innerRadius=labelProps.innerRadius,outerRadius=labelProps.outerRadius,percent=labelProps.percent;
-    if (percent < 0.05) return null;
-    var r = innerRadius+(outerRadius-innerRadius)*0.6;
+    if (percent < 0.08) return null;
+    // Place label at center of arc band
+    var r = innerRadius+(outerRadius-innerRadius)*0.5;
     var x = cx+r*Math.cos(-midAngle*RADIAN);
     var y = cy+r*Math.sin(-midAngle*RADIAN);
-    return <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight={600}>{(percent*100).toFixed(0)+"%"}</text>;
+    return (
+      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="middle" fontSize={9} fontWeight={700} style={{textShadow:"0 1px 2px rgba(0,0,0,0.8)"}}>
+        {(percent*100).toFixed(0)+"%"}
+      </text>
+    );
   }
 
   return (
@@ -443,14 +503,24 @@ function HomePage(props) {
       <Card style={{background:"linear-gradient(135deg, "+t.card+" 60%, "+t.primary+"22)"}}>
         <div style={{padding:"20px 20px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
           <div>
-            <p style={{fontSize:12,color:t.muted,margin:0}}>總資產</p>
-            <p style={{fontSize:32,fontWeight:700,color:t.primary,margin:"8px 0 0",fontFamily:"monospace"}}>{"$"+numFmt(total)}</p>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <p style={{fontSize:12,color:t.muted,margin:0}}>總資產</p>
+              <button onClick={function(){
+                var np=Object.assign({},prefs,{hideTotal:!prefs.hideTotal});
+                setPrefs(np); savePrefs(np);
+              }} style={{background:"none",border:"none",color:t.muted,cursor:"pointer",padding:2,display:"flex",alignItems:"center"}}>
+                {prefs.hideTotal?<EyeOff size={13}/>:<Eye size={13}/>}
+              </button>
+            </div>
+            <p style={{fontSize:32,fontWeight:700,color:t.primary,margin:"8px 0 0",fontFamily:"monospace"}}>
+              {prefs.hideTotal?"$***,***":"$"+numFmt(total)}
+            </p>
           </div>
           {pieData.length>0 && (
             <div style={{width:120,height:120,flexShrink:0}}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={30} outerRadius={52} dataKey="value" strokeWidth={2} stroke={t.card} labelLine={false} label={renderLabel}>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={28} outerRadius={54} dataKey="value" strokeWidth={1} stroke={t.card} labelLine={false} label={renderLabel}>
                     {pieData.map(function(e,i){return <Cell key={i} fill={e.color}/>;}) }
                   </Pie>
                   <Tooltip formatter={function(v){return ["$"+numFmt(v),"金額"];}} contentStyle={{background:t.card,border:"1px solid "+t.border,borderRadius:8,color:t.text,fontSize:12}}/>
@@ -688,9 +758,21 @@ function StockRow(rowProps) {
   var onCodeBlur=rowProps.onCodeBlur;   var onNameBlur=rowProps.onNameBlur;
   var onFieldChange=rowProps.onFieldChange;
   var onFetch=rowProps.onFetch; var onDelete=rowProps.onDelete;
+
+  // 現股計算: (成本 - 現價) × 數量 (張=×1000, 零股=×1)
+  var isZeroStock = !isM && s.unitType==="zero";
+  var unitMultiplier = isZeroStock ? 1 : 1000;
+  // 現股市值
+  var cMarketVal = isM ? s.marketValue : (s.price * s.shares * unitMultiplier);
+  // 現股損益
+  var cPnL = isM ? 0 : ((s.buyValue - s.price) * s.shares * unitMultiplier);
+  // 融資計算: ((買進價值 - 現價) - (買進價值 × 成數%)) × 張數
+  var mPnL = isM ? ((s.buyValue - s.price - s.buyValue*(s.marginRatio||60)/100) * s.shares * 1000) : 0;
+
   return (
     <Card style={{marginBottom:10}}>
       <div style={{padding:"13px 13px 11px"}}>
+        {/* 代號 + 名稱 + 刷新 */}
         <div style={{display:"flex",gap:8,alignItems:"flex-end",marginBottom:10}}>
           <div style={{flex:"0 0 90px"}}>
             <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>代號</label>
@@ -709,37 +791,45 @@ function StockRow(rowProps) {
             <RefreshCw size={14}/>
           </button>
         </div>
+
+        {/* 現股欄位 */}
         {!isM&&(
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
-            <div>
-              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>成本</label>
-              <input type="number" value={s.buyValue||""} onChange={function(e){onFieldChange("buyValue",+e.target.value);}}
-                style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+          <div>
+            {/* 張/零股 切換 */}
+            <div style={{display:"flex",background:t.surface,borderRadius:8,border:"1px solid "+t.border,overflow:"hidden",marginBottom:10,width:"fit-content"}}>
+              {[["share","整張"],["zero","零股"]].map(function(it){
+                var active=(s.unitType||"share")===it[0];
+                return <button key={it[0]} onClick={function(){onFieldChange("unitType",it[0]);}} style={{padding:"5px 14px",border:"none",cursor:"pointer",fontSize:12,fontWeight:500,background:active?t.primary:"transparent",color:active?"#fff":t.muted}}>{it[1]}</button>;
+              })}
             </div>
-            <div>
-              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>
-                現價{s.price>0&&<span style={{color:t.success,marginLeft:4,fontSize:10}}>✓</span>}
-              </label>
-              <input type="number" value={s.price||""} step="0.1" onChange={function(e){onFieldChange("price",+e.target.value);}}
-                style={{background:t.surface,border:"1px solid "+(s.price>0?t.success+"66":t.border),borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
-            </div>
-            <div>
-              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>張數</label>
-              <input type="number" value={s.shares||""} onChange={function(e){onFieldChange("shares",+e.target.value);}}
-                style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
-            </div>
-            <div>
-              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>自備款</label>
-              <input type="number" value={s.principal||""} onChange={function(e){onFieldChange("principal",+e.target.value);}}
-                style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+              <div>
+                <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>成本（每股）</label>
+                <input type="number" value={s.buyValue||""} step="0.1" onChange={function(e){onFieldChange("buyValue",+e.target.value);}}
+                  style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>
+                  現價{s.price>0&&<span style={{color:t.success,marginLeft:4,fontSize:10}}>✓</span>}
+                </label>
+                <input type="number" value={s.price||""} step="0.1" onChange={function(e){onFieldChange("price",+e.target.value);}}
+                  style={{background:t.surface,border:"1px solid "+(s.price>0?t.success+"66":t.border),borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+              </div>
+              <div>
+                <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>{isZeroStock?"數量（股）":"數量（張）"}</label>
+                <input type="number" value={s.shares||""} onChange={function(e){onFieldChange("shares",+e.target.value);}}
+                  style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+              </div>
             </div>
           </div>
         )}
+
+        {/* 融資欄位 */}
         {isM&&(
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:8}}>
             <div>
-              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>買進價值</label>
-              <input type="number" value={s.buyValue||""} onChange={function(e){onFieldChange("buyValue",+e.target.value);}}
+              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>買進均價</label>
+              <input type="number" value={s.buyValue||""} step="0.1" onChange={function(e){onFieldChange("buyValue",+e.target.value);}}
                 style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
             </div>
             <div>
@@ -748,8 +838,8 @@ function StockRow(rowProps) {
                 style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
             </div>
             <div>
-              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>融資成數%</label>
-              <input type="number" value={s.marginRatio||60} onChange={function(e){onFieldChange("marginRatio",+e.target.value);}}
+              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>成數%</label>
+              <input type="number" value={s.marginRatio===undefined||s.marginRatio===null?"":s.marginRatio} placeholder="60" onChange={function(e){onFieldChange("marginRatio",e.target.value===""?60:+e.target.value);}}
                 style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
             </div>
             <div>
@@ -760,17 +850,27 @@ function StockRow(rowProps) {
                 style={{background:t.surface,border:"1px solid "+(s.price>0?t.success+"66":t.border),borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
             </div>
             <div>
-              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>張數</label>
+              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>數量</label>
               <input type="number" value={s.shares||""} onChange={function(e){onFieldChange("shares",+e.target.value);}}
                 style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
             </div>
           </div>
         )}
+
+        {/* 底部計算結果 */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,paddingTop:10,borderTop:"1px solid "+t.border}}>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-            <span style={{fontSize:12,color:t.muted}}>市值：<b style={{color:t.text,fontFamily:"monospace"}}>{"$"+numFmt(s.marketValue)}</b></span>
-            {isM&&<span style={{fontSize:12,color:t.muted}}>公司融資：<b style={{color:t.danger,fontFamily:"monospace"}}>{"$"+numFmt(s.companyLoan)}</b></span>}
-            {isM&&<span style={{fontSize:12,color:t.muted}}>我的淨值：<b style={{color:s.netValue>=0?t.success:t.danger,fontFamily:"monospace"}}>{"$"+numFmt(s.netValue)}</b></span>}
+            {!isM&&(
+              <span style={{fontSize:12,color:t.muted}}>
+                市值：<b style={{color:t.text,fontFamily:"monospace"}}>{"$"+numFmt(cMarketVal)}</b>
+                {s.buyValue>0&&s.price>0&&<span style={{marginLeft:8,color:cPnL<=0?t.success:t.danger,fontFamily:"monospace"}}>{cPnL<=0?"+":""}{numFmt(-cPnL)}</span>}
+              </span>
+            )}
+            {isM&&(
+              <span style={{fontSize:12,color:t.muted}}>
+                損益：<b style={{fontFamily:"monospace",color:mPnL>=0?t.success:t.danger}}>{mPnL>=0?"+":""}{numFmt(mPnL)}</b>
+              </span>
+            )}
           </div>
           <button onClick={onDelete} style={{background:"none",border:"none",color:t.danger,cursor:"pointer",padding:4,display:"flex",alignItems:"center"}}>
             <Trash2 size={14}/>
@@ -786,7 +886,7 @@ function TwStocksPage(props) {
   var snapshot=props.snapshot; var onSave=props.onSave;
   var t=useTheme();
   var s1=useState("cash"); var tab=s1[0]; var setTab=s1[1];
-  var emptyC=function(){return {_id:"c"+Date.now()+Math.random(),type:"cash",code:"",name:"",buyValue:0,principal:0,price:0,shares:0,marketValue:0};};
+  var emptyC=function(){return {_id:"c"+Date.now()+Math.random(),type:"cash",code:"",name:"",buyValue:0,principal:0,price:0,shares:0,marketValue:0,unitType:"share"};};
   var emptyM=function(){return {_id:"m"+Date.now()+Math.random(),type:"margin",code:"",name:"",buyValue:0,principal:0,price:0,shares:0,marketValue:0,marginLoan:0,marginRatio:60,companyLoan:0,netValue:0};};
   var s2=useState([emptyC()]); var cashStocks=s2[0]; var setCashStocks=s2[1];
   var s3=useState([emptyM()]); var marginStocks=s3[0]; var setMarginStocks=s3[1];
@@ -803,12 +903,17 @@ function TwStocksPage(props) {
     }
   },[snapshot]);
 
-  function recC(it){return Object.assign({},it,{marketValue:it.price*it.shares*1000});}
+  function recC(it){
+    var mult = it.unitType==="zero" ? 1 : 1000;
+    return Object.assign({},it,{marketValue:it.price*it.shares*mult});
+  }
   function recM(it){
-    var mv=it.price*it.shares*1000; var ml=it.buyValue-it.principal;
+    var mv=it.price*it.shares*1000;
     var ratio=it.marginRatio||60;
     var companyLoan=Math.round(it.buyValue*ratio/100);
-    return Object.assign({},it,{marketValue:mv,marginLoan:ml,companyLoan:companyLoan,netValue:mv-companyLoan});
+    // 損益: ((買進均價 - 現價) - (買進均價 × 成數%)) × 張數
+    var pnl=((it.buyValue-it.price)-it.buyValue*ratio/100)*it.shares*1000;
+    return Object.assign({},it,{marketValue:mv,marginLoan:it.buyValue-it.principal,companyLoan:companyLoan,netValue:mv-companyLoan,pnl:pnl});
   }
   function updC(i,f,v){setCashStocks(function(p){var u=p.slice();var n=Object.assign({},u[i]);n[f]=v;u[i]=recC(n);return u;});}
   function updM(i,f,v){setMarginStocks(function(p){var u=p.slice();var n=Object.assign({},u[i]);n[f]=v;u[i]=recM(n);return u;});}
@@ -889,7 +994,7 @@ function TwStocksPage(props) {
       </div>
       {tab==="cash"&&(
         <div>
-          <p style={{fontSize:12,color:t.muted,marginBottom:10}}>{"現股市值：$"+numFmt(cashTotal)}</p>
+          <p style={{fontSize:12,color:t.muted,marginBottom:10}}>{"現股市值：$"+numFmt(cashTotal)+"（整張＋零股）"}</p>
           {cashStocks.map(function(s,i){
             var isFetching=fetchingIdx&&!fetchingIdx.isM&&fetchingIdx.idx===i;
             return <StockRow key={s._id||("c"+i)} s={s} i={i} isM={false} t={t} isFetching={isFetching}
@@ -1100,6 +1205,24 @@ function GoldPage(props) {
         );
       })}
       <Btn variant="outline" onClick={function(){setItems(function(p){return [{_id:"g"+Date.now(),name:"",principal:0,unit:0,unitType:"qian"}].concat(p);});}} style={{width:"100%",justifyContent:"center",borderStyle:"dashed"}}><Plus size={13}/>新增黃金品項</Btn>
+      {items.filter(function(x){return !!x.name;}).length>0&&(
+        <Card style={{marginTop:4}}>
+          <div style={{padding:"12px 14px"}}>
+            {(function(){
+              var totalCost=items.reduce(function(s,x){return s+(x.principal||0);},0);
+              var diff=goldTotal-totalCost;
+              return (
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:13,color:t.muted}}>總成本 ${numFmt(totalCost)}　市值 ${numFmt(goldTotal)}</span>
+                  <span style={{fontSize:14,fontWeight:600,fontFamily:"monospace",color:diff>=0?t.success:t.danger}}>
+                    {diff>=0?"+":""}{numFmt(diff)}
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
+        </Card>
+      )}
     </Shell>
   );
 }
@@ -1236,10 +1359,11 @@ function CustomCatPage(props) {
 // ── 分佈圖 ────────────────────────────────────────────────────────────────────
 function PieChartPage(props) {
   var snapshot = props.snapshot; var history = props.history; var customCats = props.customCats;
+  var themePreset = props.themePreset;
   var t = useTheme();
   var total = snapshot ? (Number(snapshot.totalAssets)||0) : 0;
 
-  var allCats = BUILT_IN.map(function(c){return {key:c.key,label:c.label,color:c.color};}).concat(
+  var allCats = BUILT_IN.map(function(c){return {key:c.key,label:c.label,color:getBuiltInColor(c.key,themePreset)};}).concat(
     (customCats||[]).map(function(c){return {key:"custom_"+c.id,label:c.label,color:c.color||"#7c9ef0"};})
   );
 
@@ -1461,10 +1585,11 @@ function SettingsPage(props) {
     return cc ? cc.label : key;
   }
   function getColor(key) {
-    var b = BUILT_IN.find(function(c){return c.key===key;}); if(b) return b.color;
+    var b = BUILT_IN.find(function(c){return c.key===key;});
+    if (b) return getBuiltInColor(key, prefs.themePreset);
     var id = key.replace("custom_","");
     var cc = (customCats||[]).find(function(c){return c.id===id;});
-    return cc ? (cc.color||"#7c9ef0") : "#7c9ef0";
+    return cc ? (cc.color||t.primary) : t.primary;
   }
   function reorder(from,to) {
     if(from===to) return;
@@ -1598,6 +1723,57 @@ function SettingsPage(props) {
 
       <Card>
         <div style={{padding:"14px 14px 12px"}}>
+          <p style={{fontSize:13,fontWeight:600,color:t.text,marginBottom:12}}>主題配色</p>
+          {[
+              ["莫蘭迪", [
+                ["morandi1","米霧","#f2ede8","#a07865","#3d3530"],
+                ["morandi2","藍霧","#e8ecf0","#5a7fa0","#2c3540"],
+                ["morandi3","玫灰","#f0e8e8","#a06070","#3a2c2c"],
+                ["morandi4","抹茶","#e8ede8","#5a8870","#2c3830"],
+                ["morandi5","薰衣草","#eceaf2","#7068a8","#302c40"]
+              ]],
+              ["基本", [
+                ["dark","深色","#0f1117","#7c9ef0","#ffffff"],
+                ["light","淺色","#f5f5f5","#5c6bc0","#1a1a2e"]
+              ]],
+              ["彩色暗系", [
+                ["candy","糖果","#1a0a2e","#c060ff","#f0e0ff"],
+                ["sunset","夕陽","#1a0808","#ff7040","#ffe8d0"],
+                ["teal","翡翠","#041c1c","#00d4c0","#d0f5f0"],
+                ["royal","皇家","#0a0818","#8060ff","#e0d8ff"]
+              ]],
+              ["螢光暗系", [
+                ["neon","霓虹","#050510","#00ffff","#e0e0ff"],
+                ["matrix","駭客","#000800","#00ff41","#00ff41"],
+                ["cyber","電馭","#080010","#ff0099","#f0e0ff"]
+              ]]
+            ].map(function(group){
+              var groupName=group[0]; var themes=group[1];
+              return (
+                <div key={groupName} style={{marginBottom:12}}>
+                  <p style={{fontSize:11,color:t.muted,marginBottom:6,fontWeight:600}}>{groupName}</p>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {themes.map(function(it){
+                      var isActive=(prefs.themePreset||"dark")===it[0];
+                      return (
+                        <button key={it[0]} onClick={function(){
+                          var np=Object.assign({},prefs,{themePreset:it[0],isDark:it[0]!=="light"&&it[0].indexOf("morandi")<0});
+                          props.setPrefs(np); savePrefs(np);
+                        }} style={{background:it[2],border:"2px solid "+(isActive?it[3]:"#ffffff22"),borderRadius:10,padding:"8px 10px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,minWidth:52,boxShadow:isActive?"0 0 8px "+it[3]+"88":"none"}}>
+                          <div style={{width:20,height:20,borderRadius:"50%",background:it[3],boxShadow:"0 0 4px "+it[3]+"66"}}/>
+                          <span style={{fontSize:10,color:it[4],fontWeight:isActive?700:400,textAlign:"center",whiteSpace:"nowrap"}}>{it[1]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{padding:"14px 14px 12px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <p style={{fontSize:13,fontWeight:600,color:t.text,margin:0}}>修改 PIN 碼</p>
             <Btn variant="outline" size="sm" onClick={function(){setPinMode(!pinMode);}}>{pinMode?"取消":"修改"}</Btn>
@@ -1640,7 +1816,7 @@ function SettingsPage(props) {
 // ── App Root ──────────────────────────────────────────────────────────────────
 export default function App() {
   var s0 = useState(loadPrefs); var prefs = s0[0]; var setPrefs = s0[1];
-  var theme = prefs.isDark ? DarkTheme : LightTheme;
+  var theme = resolveTheme(prefs);
   var s1 = useState("home"); var route = s1[0]; var setRoute = s1[1];
   var s2 = useState(false); var unlocked = s2[0]; var setUnlocked = s2[1];
   var s3 = useState([]); var snapshots = s3[0]; var setSnapshots = s3[1];
@@ -1690,7 +1866,7 @@ export default function App() {
     }
   }
 
-  function toggleTheme() { var np=Object.assign({},prefs,{isDark:!prefs.isDark}); setPrefs(np); savePrefs(np); }
+  function toggleTheme() { var p=prefs.themePreset||"dark"; var next=p==="dark"?"light":"dark"; var np=Object.assign({},prefs,{themePreset:next,isDark:next!=="light"}); setPrefs(np); savePrefs(np); }
 
   function handleSBLogin(sess) {
     // Extract user_id from JWT token
@@ -1735,7 +1911,7 @@ export default function App() {
     showToast("已登出","success");
   }
 
-  var allCats = BUILT_IN.map(function(c){return {key:c.key,label:c.label,color:c.color,route:c.route};}).concat(
+  var allCats = BUILT_IN.map(function(c){return {key:c.key,label:c.label,color:getBuiltInColor(c.key,prefs.themePreset),route:c.route};}).concat(
     (customCats||[]).map(function(c){return {key:"custom_"+c.id,label:c.label,color:c.color||"#7c9ef0",route:"custom_"+c.id};})
   );
 
@@ -1773,7 +1949,7 @@ export default function App() {
     if (route==="banks") return <BanksPage snapshot={latest} onSave={handleSave}/>;
     if (route==="cash") return <CashPage snapshot={latest} onSave={handleSave}/>;
     if (route==="loans") return <LoansPage snapshot={latest} onSave={handleSave}/>;
-    if (route==="pie-chart") return <PieChartPage snapshot={latest} history={snapshots} customCats={customCats}/>;
+    if (route==="pie-chart") return <PieChartPage snapshot={latest} history={snapshots} customCats={customCats} themePreset={prefs.themePreset}/>;
     if (route==="history") return <HistoryPage history={snapshots} allCats={allCats}/>;
     if (route==="settings") return <SettingsPage prefs={prefs} setPrefs={setPrefs} customCats={customCats} setCustomCats={setCustomCats} snapshot={latest} onSave={handleSave}
       sbSession={sbSession} onOpenSB={function(){setShowSBPanel(true);}} onSBUpload={doSBUpload} onSBDownload={function(){doSBDownload(null);}} onSBLogout={doSBLogout}/>;

@@ -709,7 +709,14 @@ function StockRow(rowProps) {
   // 現股損益
   var cPnL = isM ? 0 : ((s.buyValue - s.price) * s.shares * unitMultiplier);
   // 融資計算: ((買進價值 - 現價) - (買進價值 × 成數%)) × 張數
-  var mPnL = isM ? ((s.buyValue - s.price - s.buyValue*((s.marginRatio==null?60:s.marginRatio))/100) * s.shares * 1000) : 0;
+  // 融資損益 = 目前市值 - 公司融資金額 - 自備款
+  // 公司融資金額 = 買進價值 × (1 - 成數%)；自備款 = 買進價值 × 成數%
+  var mRatio = (s.marginRatio==null?60:s.marginRatio);
+  var mBuyTotal = s.buyValue * s.shares * 1000;
+  var mCompanyLoan = mBuyTotal * (1 - mRatio/100);
+  var mPrincipal = s.principal>0 ? s.principal : (mBuyTotal * mRatio/100);
+  var mCurrentValue = s.price * s.shares * 1000;
+  var mPnL = isM ? (mCurrentValue - mCompanyLoan - mPrincipal) : 0;
 
   return (
     <Card style={{marginBottom:10}}>
@@ -805,12 +812,12 @@ function StockRow(rowProps) {
             {!isM&&(
               <span style={{fontSize:12,color:t.muted}}>
                 市值：<b style={{color:t.text,fontFamily:"monospace"}}>{"$"+numFmt(cMarketVal)}</b>
-                {s.buyValue>0&&s.price>0&&<span style={{marginLeft:8,color:cPnL<=0?t.success:t.danger,fontFamily:"monospace"}}>{cPnL<=0?"+":""}{numFmt(-cPnL)}</span>}
+                {s.buyValue>0&&s.price>0&&<span style={{marginLeft:8,color:cPnL<=0?t.danger:t.success,fontFamily:"monospace"}}>{cPnL<=0?"+":""}{numFmt(-cPnL)}</span>}
               </span>
             )}
             {isM&&(
               <span style={{fontSize:12,color:t.muted}}>
-                損益：<b style={{fontFamily:"monospace",color:mPnL>=0?t.success:t.danger}}>{mPnL>=0?"+":""}{numFmt(mPnL)}</b>
+                損益：<b style={{fontFamily:"monospace",color:mPnL>=0?t.danger:t.success}}>{mPnL>=0?"+":""}{numFmt(mPnL)}</b>
               </span>
             )}
           </div>
@@ -852,9 +859,10 @@ function TwStocksPage(props) {
   function recM(it){
     var mv=it.price*it.shares*1000;
     var ratio=(it.marginRatio==null?60:it.marginRatio);
-    var companyLoan=Math.round(it.buyValue*ratio/100);
-    // 損益: ((買進均價 - 現價) - (買進均價 × 成數%)) × 張數
-    var pnl=((it.buyValue-it.price)-it.buyValue*ratio/100)*it.shares*1000;
+    var buyTotal=it.buyValue*it.shares*1000;
+    var companyLoan=buyTotal*(1-ratio/100);
+    var principal=it.principal>0?it.principal:(buyTotal*ratio/100);
+    var pnl=mv-companyLoan-principal;
     return Object.assign({},it,{marketValue:mv,marginLoan:it.buyValue-it.principal,companyLoan:companyLoan,netValue:mv-companyLoan,pnl:pnl});
   }
   function updC(i,f,v){setCashStocks(function(p){var u=p.slice();var n=Object.assign({},u[i]);n[f]=v;u[i]=recC(n);return u;});}

@@ -126,7 +126,6 @@ function sbSignOut(url, key, token) {
 }
 function sbUpload(url, key, token, userId, data) {
   var base = sbCleanUrl(url);
-  // Use auth.uid() via RLS - don't send uid in body, let Supabase get it from JWT
   var payload = {data: data, updated_at: new Date().toISOString()};
   if (userId) payload.uid = userId;
   return fetch(base+"/rest/v1/snapshots?on_conflict=uid", {
@@ -137,11 +136,12 @@ function sbUpload(url, key, token, userId, data) {
     if (!r.ok) {
       return r.text().then(function(t){
         console.error("upload error:",t);
-        alert("上傳錯誤: "+t);
-        return false;
+        return {ok:false, error:t};
       });
     }
-    return true;
+    return {ok:true};
+  }).catch(function(e){
+    return {ok:false, error:e.message||"網路連線失敗"};
   });
 }
 function sbDownload(url, key, token) {
@@ -588,7 +588,10 @@ function HomePage(props) {
 var _stockCache = {};
 
 // 查名稱：用 TWSE/TPEx OpenAPI（昨收，CORS OK）
-// 台股名稱查詢 - 用 STOCK_DAY_AVG_ALL（有名稱，下載一次後快取）
+// 內建常見台股代號清單（離線可用，立即查到，不需等 API）
+var BUILTIN_STOCKS = {"1101":"台泥","1102":"亞泥","1216":"統一","1301":"台塑","1303":"南亞","1326":"台化","1789":"神隆","2002":"中鋼","2204":"中華","2207":"和泰車","2303":"聯電","2308":"台達電","2317":"鴻海","2324":"仁寶","2330":"台積電","2357":"華碩","2382":"廣達","2395":"研華","2409":"友達","2454":"聯發科","2603":"長榮","2609":"陽明","2610":"華航","2615":"萬海","2618":"長榮航","2880":"華南金","2881":"富邦金","2882":"國泰金","2883":"開發金","2884":"玉山金","2885":"元大金","2886":"兆豐金","2887":"台新金","2890":"永豐金","2891":"中信金","2892":"第一金","3008":"大立光","3017":"奇鋐","3081":"聯亞","3105":"穩懋","3131":"弘塑","3231":"緯創","3293":"鈊象","3324":"雙鴻","3481":"群創","3529":"力旺","3711":"日月光投控","4147":"中裕","4174":"浩鼎","5274":"信驊","5347":"世界","5880":"合庫金","6147":"頎邦","6182":"合晶","6223":"旺矽","6274":"台燿","6488":"環球晶","6515":"穎崴","6547":"高端疫苗","6669":"緯穎","8046":"南電","8069":"元太","8299":"群聯"};
+
+// 台股名稱查詢：先查內建清單（瞬間），查不到再呼叫 API
 var _stockCache = {};
 var _twseAllList = null;
 var _twseAllTs = 0;
@@ -611,10 +614,15 @@ function _getTwseAll() {
 
 function fetchByCode(code) {
   var q = (code||"").trim(); if (!q) return Promise.resolve(null);
+  // 1. 先查內建清單，瞬間回應
+  if (BUILTIN_STOCKS[q]) {
+    return Promise.resolve({name: BUILTIN_STOCKS[q], code:q, price:0});
+  }
   var cacheKey = "c_"+q;
   if (_stockCache[cacheKey] && Date.now()-_stockCache[cacheKey].ts<3600000) {
     return Promise.resolve(_stockCache[cacheKey].data);
   }
+  // 2. 查不到再呼叫 API
   return _getTwseAll().then(function(list){
     var found = null;
     list.forEach(function(item){ if (item.Code===q) found=item; });
@@ -623,7 +631,6 @@ function fetchByCode(code) {
       _stockCache[cacheKey] = {data:r, ts:Date.now()};
       return r;
     }
-    // 試上櫃
     return fetch("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
       .then(function(r2){ return r2.ok ? r2.json() : []; })
       .then(function(list2){
@@ -639,10 +646,19 @@ function fetchByCode(code) {
 
 function fetchByName(name) {
   var q = (name||"").trim(); if (!q) return Promise.resolve(null);
+  // 1. 先查內建清單
+  var builtinCode = null;
+  Object.keys(BUILTIN_STOCKS).forEach(function(c){
+    if (!builtinCode && BUILTIN_STOCKS[c].indexOf(q)>=0) builtinCode=c;
+  });
+  if (builtinCode) {
+    return Promise.resolve({name: BUILTIN_STOCKS[builtinCode], code:builtinCode, price:0});
+  }
   var cacheKey = "n_"+q;
   if (_stockCache[cacheKey] && Date.now()-_stockCache[cacheKey].ts<3600000) {
     return Promise.resolve(_stockCache[cacheKey].data);
   }
+  // 2. 查不到再呼叫 API
   return _getTwseAll().then(function(list){
     var found = null;
     list.forEach(function(item){
@@ -1798,7 +1814,9 @@ export default function App() {
     if (sbSession) {
       var cfg2 = loadSBConfig();
       var d2 = Object.assign({},loadStore(),{snapshots:updated});
-      sbUpload(cfg2.url, cfg2.key, sbSession.access_token, sbSession.userId||"", d2).catch(function(){});
+      sbUpload(cfg2.url, cfg2.key, sbSession.access_token, sbSession.userId||"", d2).then(function(result){
+        if (!result.ok) showToast("自動同步失敗","error");
+      }).catch(function(){ showToast("自動同步失敗","error"); });
     }
   }
 
@@ -1822,10 +1840,10 @@ export default function App() {
     if (!sbSession) return;
     var cfg = loadSBConfig();
     var data = loadStore();
-    sbUpload(cfg.url, cfg.key, sbSession.access_token, sbSession.userId||"", data).then(function(ok){
-      if (ok) showToast("已上傳到雲端","success");
-      else showToast("上傳失敗","error");
-    }).catch(function(){ showToast("上傳失敗","error"); });
+    sbUpload(cfg.url, cfg.key, sbSession.access_token, sbSession.userId||"", data).then(function(result){
+      if (result.ok) showToast("已上傳到雲端","success");
+      else showToast("上傳失敗: "+(result.error||"").slice(0,50),"error");
+    }).catch(function(e){ showToast("上傳失敗: "+e.message,"error"); });
   }
   function doSBDownload(sess) {
     var s = sess || sbSession; if (!s) return;

@@ -709,7 +709,7 @@ function StockRow(rowProps) {
   // 現股損益
   var cPnL = isM ? 0 : ((s.buyValue - s.price) * s.shares * unitMultiplier);
   // 融資計算: ((買進價值 - 現價) - (買進價值 × 成數%)) × 張數
-  var mPnL = isM ? ((s.buyValue - s.price - s.buyValue*(s.marginRatio||60)/100) * s.shares * 1000) : 0;
+  var mPnL = isM ? ((s.buyValue - s.price - s.buyValue*((s.marginRatio==null?60:s.marginRatio))/100) * s.shares * 1000) : 0;
 
   return (
     <Card style={{marginBottom:10}}>
@@ -781,7 +781,7 @@ function StockRow(rowProps) {
             </div>
             <div>
               <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>成數%</label>
-              <input type="number" value={s.marginRatio===undefined||s.marginRatio===null?"":s.marginRatio} placeholder="60" onChange={function(e){onFieldChange("marginRatio",e.target.value===""?60:+e.target.value);}}
+              <input type="number" value={s.marginRatio===undefined||s.marginRatio===null?"":s.marginRatio} placeholder="60" onChange={function(e){onFieldChange("marginRatio",e.target.value===""?null:+e.target.value);}}
                 style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
             </div>
             <div>
@@ -851,7 +851,7 @@ function TwStocksPage(props) {
   }
   function recM(it){
     var mv=it.price*it.shares*1000;
-    var ratio=it.marginRatio||60;
+    var ratio=(it.marginRatio==null?60:it.marginRatio);
     var companyLoan=Math.round(it.buyValue*ratio/100);
     // 損益: ((買進均價 - 現價) - (買進均價 × 成數%)) × 張數
     var pnl=((it.buyValue-it.price)-it.buyValue*ratio/100)*it.shares*1000;

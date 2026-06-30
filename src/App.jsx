@@ -118,6 +118,13 @@ function sbSignIn(url, key, email, password) {
     body:JSON.stringify({email:email, password:password})
   }).then(function(r){return r.json();});
 }
+function sbRefreshToken(url, key, refreshToken) {
+  var base = sbCleanUrl(url);
+  return fetch(base+"/auth/v1/token?grant_type=refresh_token", {
+    method:"POST", headers:sbHeaders(key),
+    body:JSON.stringify({refresh_token:refreshToken})
+  }).then(function(r){return r.json();});
+}
 function sbSignOut(url, key, token) {
   var base = sbCleanUrl(url);
   return fetch(base+"/auth/v1/logout", {
@@ -1810,13 +1817,15 @@ export default function App() {
       var existing = loadStore(); saveStore(Object.assign({},existing,{snapshots:updated}));
     }
     showToast("資料已儲存");
-    // Auto sync to cloud if logged in
+    // Auto sync to cloud if logged in (with token refresh)
     if (sbSession) {
-      var cfg2 = loadSBConfig();
-      var d2 = Object.assign({},loadStore(),{snapshots:updated});
-      sbUpload(cfg2.url, cfg2.key, sbSession.access_token, sbSession.userId||"", d2).then(function(result){
-        if (!result.ok) showToast("自動同步失敗","error");
-      }).catch(function(){ showToast("自動同步失敗","error"); });
+      ensureFreshSession().then(function(sess){
+        var cfg2 = loadSBConfig();
+        var d2 = Object.assign({},loadStore(),{snapshots:updated});
+        sbUpload(cfg2.url, cfg2.key, sess.access_token, sess.userId||"", d2).then(function(result){
+          if (!result.ok) showToast("自動同步失敗","error");
+        }).catch(function(){ showToast("自動同步失敗","error"); });
+      });
     }
   }
 
@@ -1836,17 +1845,33 @@ export default function App() {
     // Auto download after login
     doSBDownload(sess);
   }
+  function ensureFreshSession() {
+    if (!sbSession) return Promise.resolve(null);
+    var cfg = loadSBConfig();
+    if (!sbSession.refresh_token) return Promise.resolve(sbSession);
+    return sbRefreshToken(cfg.url, cfg.key, sbSession.refresh_token).then(function(data){
+      if (data && data.access_token) {
+        var newSess = Object.assign({}, sbSession, {access_token:data.access_token, refresh_token:data.refresh_token||sbSession.refresh_token});
+        setSbSession(newSess); saveSBSession(newSess);
+        return newSess;
+      }
+      return sbSession;
+    }).catch(function(){ return sbSession; });
+  }
   function doSBUpload() {
     if (!sbSession) return;
-    var cfg = loadSBConfig();
-    var data = loadStore();
-    sbUpload(cfg.url, cfg.key, sbSession.access_token, sbSession.userId||"", data).then(function(result){
-      if (result.ok) showToast("已上傳到雲端","success");
-      else showToast("上傳失敗: "+(result.error||"").slice(0,50),"error");
-    }).catch(function(e){ showToast("上傳失敗: "+e.message,"error"); });
+    ensureFreshSession().then(function(sess){
+      var cfg = loadSBConfig();
+      var data = loadStore();
+      sbUpload(cfg.url, cfg.key, sess.access_token, sess.userId||"", data).then(function(result){
+        if (result.ok) showToast("已上傳到雲端","success");
+        else showToast("上傳失敗: "+(result.error||"").slice(0,50),"error");
+      }).catch(function(e){ showToast("上傳失敗: "+e.message,"error"); });
+    });
   }
   function doSBDownload(sess) {
-    var s = sess || sbSession; if (!s) return;
+    var s0 = sess || sbSession; if (!s0) return;
+    ensureFreshSession().then(function(s){
     var cfg = loadSBConfig();
     sbDownload(cfg.url, cfg.key, s.access_token).then(function(row){
       if (!row) { showToast("雲端無資料","error"); return; }
@@ -1856,6 +1881,7 @@ export default function App() {
       saveStore(d);
       showToast("已從雲端下載","success");
     }).catch(function(){ showToast("下載失敗","error"); });
+    });
   }
   function doSBLogout() {
     if (!sbSession) return;

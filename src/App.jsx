@@ -783,8 +783,8 @@ function StockRow(rowProps) {
             </div>
             <div>
               <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>自備款</label>
-              <div style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.muted,fontSize:14,minHeight:34,display:"flex",alignItems:"center"}}>
-                {s.principal>0?"$"+numFmt(s.principal):"—"}
+              <div style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.muted,fontSize:14,height:34,display:"flex",alignItems:"center",boxSizing:"border-box"}}>
+                {s.principal>0?numFmt(s.principal):"—"}
               </div>
             </div>
             <div>

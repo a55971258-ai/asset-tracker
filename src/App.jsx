@@ -783,8 +783,9 @@ function StockRow(rowProps) {
             </div>
             <div>
               <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>自備款</label>
-              <input type="number" value={s.principal||""} onChange={function(e){onFieldChange("principal",+e.target.value);}}
-                style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+              <div style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 8px",color:t.muted,fontSize:14,minHeight:34,display:"flex",alignItems:"center"}}>
+                {s.principal>0?"$"+numFmt(s.principal):"—"}
+              </div>
             </div>
             <div>
               <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>成數%</label>
@@ -873,9 +874,26 @@ function TwStocksPage(props) {
     return Object.assign({},it,{marketValue:mv,marginLoan:it.buyValue-it.principal,companyLoan:companyLoan,netValue:mv-companyLoan,pnl:pnl});
   }
   function updC(i,f,v){setCashStocks(function(p){var u=p.slice();var n=Object.assign({},u[i]);n[f]=v;u[i]=recC(n);return u;});}
-  function updM(i,f,v){setMarginStocks(function(p){var u=p.slice();var n=Object.assign({},u[i]);n[f]=v;u[i]=recM(n);return u;});}
+  function updM(i,f,v){setMarginStocks(function(p){
+    var u=p.slice();
+    var n=Object.assign({},u[i]);
+    n[f]=v;
+    // 自動計算自備款 = 買進均價 × 張數 × 成數%
+    var ratio=(n.marginRatio==null?60:n.marginRatio);
+    n.principal=Math.round(n.buyValue*n.shares*ratio/100);
+    u[i]=recM(n);
+    return u;
+  });}
   function updCMulti(i,fields){setCashStocks(function(p){var u=p.slice();u[i]=recC(Object.assign({},u[i],fields));return u;});}
-  function updMMulti(i,fields){setMarginStocks(function(p){var u=p.slice();u[i]=recM(Object.assign({},u[i],fields));return u;});}
+  function updMMulti(i,fields){setMarginStocks(function(p){
+    var u=p.slice();
+    var n=Object.assign({},u[i],fields);
+    // 重新計算自備款
+    var ratio=(n.marginRatio==null?60:n.marginRatio);
+    n.principal=Math.round(n.buyValue*n.shares*ratio/100);
+    u[i]=recM(n);
+    return u;
+  });}
 
   // Use top-level async helpers (no nested async allowed in Babel artifact)
   function onCodeBlur(isM,idx){

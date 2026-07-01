@@ -816,9 +816,14 @@ function StockRow(rowProps) {
               </span>
             )}
             {isM&&(
-              <span style={{fontSize:12,color:t.muted}}>
-                損益：<b style={{fontFamily:"monospace",color:mPnL>=0?t.danger:t.success}}>{mPnL>=0?"+":""}{numFmt(mPnL)}</b>
-              </span>
+              <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                <span style={{fontSize:12,color:t.muted}}>
+                  融資金額：<b style={{fontFamily:"monospace",color:t.text}}>{"$"+numFmt(mCompanyLoan)}</b>
+                </span>
+                <span style={{fontSize:12,color:t.muted}}>
+                  損益：<b style={{fontFamily:"monospace",color:mPnL>=0?t.danger:t.success}}>{mPnL>=0?"+":""}{numFmt(mPnL)}</b>
+                </span>
+              </div>
             )}
           </div>
           <button onClick={onDelete} style={{background:"none",border:"none",color:t.danger,cursor:"pointer",padding:4,display:"flex",alignItems:"center"}}>
@@ -842,6 +847,7 @@ function TwStocksPage(props) {
   var s4=useState(false); var fetchingAll=s4[0]; var setFetchingAll=s4[1];
   var s5=useState(null); var fetchingIdx=s5[0]; var setFetchingIdx=s5[1];
   var s6=useState(""); var updAt=s6[0]; var setUpdAt=s6[1];
+  var s7=useState(0); var bookValue=s7[0]; var setBookValue=s7[1];
 
   useEffect(function(){
     if(snapshot&&snapshot.twStocks&&snapshot.twStocks.length){
@@ -850,6 +856,7 @@ function TwStocksPage(props) {
       if(cash.length) setCashStocks(cash); else setCashStocks([emptyC()]);
       if(margin.length) setMarginStocks(margin); else setMarginStocks([emptyM()]);
     }
+    if(snapshot&&snapshot.twBookValue) setBookValue(snapshot.twBookValue||0);
   },[snapshot]);
 
   function recC(it){
@@ -860,7 +867,7 @@ function TwStocksPage(props) {
     var mv=it.price*it.shares*1000;
     var ratio=(it.marginRatio==null?60:it.marginRatio);
     var buyTotal=it.buyValue*it.shares*1000;
-    var companyLoan=buyTotal*(1-ratio/100);
+    var companyLoan=Math.round(buyTotal*(1-ratio/100)/1000)*1000;
     var principal=it.principal>0?it.principal:(buyTotal*ratio/100);
     var pnl=mv-companyLoan-principal;
     return Object.assign({},it,{marketValue:mv,marginLoan:it.buyValue-it.principal,companyLoan:companyLoan,netValue:mv-companyLoan,pnl:pnl});
@@ -934,23 +941,44 @@ function TwStocksPage(props) {
   var cashTotal=useMemo(function(){return cashStocks.reduce(function(s,x){return s+x.marketValue;},0);},[cashStocks]);
   var marginTotal=useMemo(function(){return marginStocks.reduce(function(s,x){return s+x.marketValue;},0);},[marginStocks]);
   var marginNetTotal=useMemo(function(){return marginStocks.reduce(function(s,x){return s+(x.netValue||0);},0);},[marginStocks]);
+  var totalCompanyLoan=useMemo(function(){return marginStocks.reduce(function(s,x){return s+(x.companyLoan||0);},0);},[marginStocks]);
+  // 市值合計 = 台股帳面價值 - 公司融資加總（若有輸入帳面價值）
+  var twTotal = bookValue>0 ? (bookValue - totalCompanyLoan) : (cashTotal + marginTotal);
 
   function handleSave(){
     var all=cashStocks.filter(function(s){return s.code||s.name;}).concat(marginStocks.filter(function(s){return s.code||s.name;}));
-    onSave({twStocks:all,twStocksTotal:cashTotal+marginTotal});
+    onSave({twStocks:all, twBookValue:bookValue, twStocksTotal:twTotal});
   }
 
   var cashFiltered=cashStocks.filter(function(s){return s.code||s.name;});
   var marginFiltered=marginStocks.filter(function(s){return s.code||s.name;});
 
   return (
-    <Shell title="台股持倉" sub={"市值合計：$"+numFmt(cashTotal+marginTotal)} onSave={handleSave}>
+    <Shell title="台股持倉" sub={"市值合計：$"+numFmt(twTotal)} onSave={handleSave}>
       <Card style={{background:t.primary+"12",border:"1px solid "+t.primary+"33",marginBottom:4}}>
         <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
           <p style={{fontSize:12,color:t.muted,margin:0}}>{updAt?"名稱更新："+updAt:"輸入代號後離開欄位自動帶入名稱"}</p>
           <div style={{display:"flex",gap:6}}>
             <Btn onClick={fetchAll} disabled={fetchingAll} size="sm"><RefreshCw size={13}/>{fetchingAll?"查詢中…":"全部帶入"}</Btn>
           </div>
+        </div>
+      </Card>
+      <Card style={{marginBottom:4}}>
+        <div style={{padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{flex:1}}>
+              <label style={{fontSize:11,color:t.muted,display:"block",marginBottom:4}}>台股帳面價值（選填，整體台股市值）</label>
+              <input type="number" value={bookValue||""} placeholder="輸入整體台股市值"
+                onChange={function(e){setBookValue(+e.target.value||0);}}
+                style={{background:t.surface,border:"1px solid "+t.border,borderRadius:8,padding:"7px 10px",color:t.text,fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"}}/>
+            </div>
+          </div>
+          {bookValue>0&&totalCompanyLoan>0&&(
+            <div style={{marginTop:8,fontSize:12,color:t.muted}}>
+              {"帳面 $"+numFmt(bookValue)+" − 公司融資 $"+numFmt(totalCompanyLoan)+" = "}
+              <span style={{color:t.primary,fontWeight:600}}>{"$"+numFmt(bookValue-totalCompanyLoan)}</span>
+            </div>
+          )}
         </div>
       </Card>
       <div style={{display:"flex",background:t.surface,borderRadius:10,padding:4,marginBottom:12}}>
@@ -980,7 +1008,7 @@ function TwStocksPage(props) {
         <div>
           <div style={{display:"flex",gap:12,marginBottom:10,flexWrap:"wrap"}}>
             <p style={{fontSize:12,color:t.muted,margin:0}}>{"融資市值：$"+numFmt(marginTotal)}</p>
-            <p style={{fontSize:12,color:t.success,margin:0}}>{"淨值：$"+numFmt(marginNetTotal)}</p>
+            <p style={{fontSize:12,color:t.muted,margin:0}}>{"公司融資合計：$"+numFmt(totalCompanyLoan)}</p>
           </div>
           {marginStocks.map(function(s,i){
             var isFetching=fetchingIdx&&fetchingIdx.isM&&fetchingIdx.idx===i;
@@ -1537,6 +1565,7 @@ function SettingsPage(props) {
   var s6 = useState(""); var pinErr = s6[0]; var setPinErr = s6[1];
   var s7 = useState(null); var dragIdx = s7[0]; var setDragIdx = s7[1];
   var s8 = useState(null); var overIdx = s8[0]; var setOverIdx = s8[1];
+  var s9 = useState(false); var editMode = s9[0]; var setEditMode = s9[1];
 
   var allKeys = BUILT_IN.map(function(c){return c.key;}).concat(
     (customCats||[]).map(function(c){return "custom_"+c.id;})
@@ -1612,22 +1641,27 @@ function SettingsPage(props) {
 
       <Card>
         <div style={{padding:"14px 14px 8px"}}>
-          <p style={{fontSize:13,fontWeight:600,color:t.text,marginBottom:4}}>總覽方塊順序 / 顯示</p>
-          <p style={{fontSize:11,color:t.muted,marginBottom:12}}>拖曳調整排列，點眼睛隱藏/顯示</p>
-          <div style={{touchAction:"none"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+            <p style={{fontSize:13,fontWeight:600,color:t.text,margin:0}}>總覽方塊順序 / 顯示</p>
+            <Btn variant={editMode?"primary":"outline"} size="sm" onClick={function(){setEditMode(!editMode);}}>
+              {editMode ? "完成排序" : "調整順序"}
+            </Btn>
+          </div>
+          <p style={{fontSize:11,color:t.muted,marginBottom:12}}>{editMode?"拖曳調整排列，完成後點「完成排序」":"點「調整順序」開始拖曳排列，或直接點眼睛隱藏/顯示"}</p>
+          <div style={{touchAction:editMode?"none":"auto"}}>
             {fullOrder.map(function(key,i){
               var hidden = (prefs.hidden||[]).indexOf(key)>=0;
               return (
-                <div key={key} data-sidx={i} draggable={true}
-                  onDragStart={function(){setDragIdx(i);}}
-                  onDragOver={function(e){e.preventDefault();setOverIdx(i);}}
-                  onDrop={function(){if(dragIdx!==null&&dragIdx!==i)reorder(dragIdx,i);setDragIdx(null);setOverIdx(null);}}
-                  onDragEnd={function(){setDragIdx(null);setOverIdx(null);}}
-                  onTouchStart={function(){onSettingsTouchStart(i);}}
-                  onTouchMove={onSettingsTouchMove}
-                  onTouchEnd={onSettingsTouchEnd}
-                  style={{display:"flex",alignItems:"center",gap:10,padding:"9px 8px",borderRadius:8,marginBottom:4,background:overIdx===i?t.primary+"22":"transparent",opacity:dragIdx===i?0.4:1,cursor:"grab"}}>
-                  <GripVertical size={14} style={{color:t.muted,flexShrink:0}}/>
+                <div key={key} data-sidx={i} draggable={editMode}
+                  onDragStart={editMode?function(){setDragIdx(i);}:undefined}
+                  onDragOver={editMode?function(e){e.preventDefault();setOverIdx(i);}:undefined}
+                  onDrop={editMode?function(){if(dragIdx!==null&&dragIdx!==i)reorder(dragIdx,i);setDragIdx(null);setOverIdx(null);}:undefined}
+                  onDragEnd={editMode?function(){setDragIdx(null);setOverIdx(null);}:undefined}
+                  onTouchStart={editMode?function(){onSettingsTouchStart(i);}:undefined}
+                  onTouchMove={editMode?onSettingsTouchMove:undefined}
+                  onTouchEnd={editMode?onSettingsTouchEnd:undefined}
+                  style={{display:"flex",alignItems:"center",gap:10,padding:"9px 8px",borderRadius:8,marginBottom:4,background:overIdx===i?t.primary+"22":"transparent",opacity:dragIdx===i?0.4:1,cursor:editMode?"grab":"default"}}>
+                  {editMode && <GripVertical size={14} style={{color:t.muted,flexShrink:0}}/>}
                   <div style={{width:10,height:10,borderRadius:"50%",background:getColor(key),flexShrink:0}}/>
                   <span style={{fontSize:13,color:hidden?t.muted:t.text,flex:1,textDecoration:hidden?"line-through":"none"}}>{getLabel(key)}</span>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>

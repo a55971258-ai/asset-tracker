@@ -527,7 +527,7 @@ function HomePage(props) {
             <div style={{width:120,height:120,flexShrink:0}}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={28} outerRadius={54} dataKey="value" strokeWidth={1} stroke={t.card} labelLine={false} label={renderLabel}>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={30} outerRadius={56} dataKey="value" strokeWidth={1} stroke={t.card} labelLine={false} label={renderLabel}>
                     {pieData.map(function(e,i){return <Cell key={i} fill={e.color}/>;}) }
                   </Pie>
                   <Tooltip formatter={function(v){return ["$"+numFmt(v),"金額"];}} contentStyle={{background:t.card,border:"1px solid "+t.border,borderRadius:8,color:t.text,fontSize:12}}/>
@@ -1411,11 +1411,16 @@ function PieChartPage(props) {
         <Card>
           <div style={{padding:"16px 16px 8px"}}>
             <p style={{fontSize:13,fontWeight:600,color:t.text,marginBottom:12}}>資產類別佔比</p>
-            <div style={{height:300}}>
+            <div style={{height:380}}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={chartData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value"
-                    label={function(p){return p.name+" "+(p.percent*100).toFixed(1)+"%";}} labelLine={{strokeWidth:1}}>
+                  <Pie data={chartData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={2} dataKey="value"
+                    label={function(p){
+                      if (p.percent < 0.04) return "";
+                      return p.name+" "+(p.percent*100).toFixed(1)+"%";
+                    }}
+                    labelLine={{strokeWidth:0.8, stroke:"#88888866"}}
+                    fontSize={10}>
                     {chartData.map(function(e,i){return <Cell key={i} fill={e.color} stroke="transparent"/>;}) }
                   </Pie>
                   <Tooltip formatter={function(v){return ["$"+numFmt(v),"金額"];}} contentStyle={{background:t.card,border:"1px solid "+t.border,borderRadius:8,color:t.text,fontSize:12}}/>

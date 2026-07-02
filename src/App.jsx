@@ -595,65 +595,100 @@ function HomePage(props) {
 var _stockCache = {};
 
 // 查名稱：用 TWSE/TPEx OpenAPI（昨收，CORS OK）
-// ── 台股報價（Yahoo Finance API，上市+上櫃，15分鐘延遲）────────────────────────
-// 內建常見台股代號→名稱（離線備援）
+// 內建常見台股代號清單（離線可用，立即查到，不需等 API）
 var BUILTIN_STOCKS = {"1101":"台泥","1102":"亞泥","1216":"統一","1301":"台塑","1303":"南亞","1326":"台化","1789":"神隆","2002":"中鋼","2204":"中華","2207":"和泰車","2303":"聯電","2308":"台達電","2317":"鴻海","2324":"仁寶","2330":"台積電","2357":"華碩","2382":"廣達","2395":"研華","2409":"友達","2454":"聯發科","2603":"長榮","2605":"新興","2606":"裕民","2609":"陽明","2610":"華航","2615":"萬海","2618":"長榮航","2880":"華南金","2881":"富邦金","2882":"國泰金","2883":"開發金","2884":"玉山金","2885":"元大金","2886":"兆豐金","2887":"台新金","2890":"永豐金","2891":"中信金","2892":"第一金","3008":"大立光","3017":"奇鋐","3081":"聯亞","3105":"穩懋","3131":"弘塑","3231":"緯創","3293":"鈊象","3324":"雙鴻","3481":"群創","3529":"力旺","3711":"日月光投控","4147":"中裕","4174":"浩鼎","5274":"信驊","5347":"世界","5880":"合庫金","6147":"頎邦","6182":"合晶","6223":"旺矽","6274":"台燿","6488":"環球晶","6515":"穎崴","6547":"高端疫苗","6669":"緯穎","8046":"南電","8069":"元太","8299":"群聯"};
 
+// 台股名稱查詢：先查內建清單（瞬間），查不到再呼叫 API
 var _stockCache = {};
+var _twseAllList = null;
+var _twseAllTs = 0;
 
-// Yahoo Finance：台股代號加 .TW（上市）或 .TWO（上櫃）
-function _yahooFetch(code) {
-  var suffixes = [".TW", ".TWO"];
-  function tryNext(i) {
-    if (i >= suffixes.length) return Promise.resolve(null);
-    var symbol = code + suffixes[i];
-    var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + symbol + "?interval=1d&range=1d";
-    return fetch(url)
-      .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(data){
-        if (!data) return tryNext(i+1);
-        var result = data.chart && data.chart.result && data.chart.result[0];
-        if (!result) return tryNext(i+1);
-        var meta = result.meta;
-        var price = meta.regularMarketPrice || meta.previousClose || 0;
-        var rawName = meta.longName || meta.shortName || code;
-        rawName = rawName.replace(" Co., Ltd.", "").replace(" Corp.", "").replace(" Inc.", "").replace(",Ltd.", "").trim();
-        if (price <= 0) return tryNext(i+1);
-        return {code:code, name:rawName, price:price};
-      })
-      .catch(function(){ return tryNext(i+1); });
+function _getTwseAll() {
+  if (_twseAllList && Date.now()-_twseAllTs < 3600000*6) {
+    return Promise.resolve(_twseAllList);
   }
-  return tryNext(0);
+  return fetch("https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_AVG_ALL")
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(list){
+      if (list && list.length > 0) {
+        _twseAllList = list;
+        _twseAllTs = Date.now();
+      }
+      return _twseAllList || [];
+    })
+    .catch(function(){ return _twseAllList || []; });
 }
 
 function fetchByCode(code) {
   var q = (code||"").trim(); if (!q) return Promise.resolve(null);
+  // 1. 先查內建清單，瞬間回應
+  if (BUILTIN_STOCKS[q]) {
+    return Promise.resolve({name: BUILTIN_STOCKS[q], code:q, price:0});
+  }
   var cacheKey = "c_"+q;
-  if (_stockCache[cacheKey] && Date.now()-_stockCache[cacheKey].ts<900000) {
+  if (_stockCache[cacheKey] && Date.now()-_stockCache[cacheKey].ts<3600000) {
     return Promise.resolve(_stockCache[cacheKey].data);
   }
-  return _yahooFetch(q).then(function(r){
-    if (r) {
-      if (BUILTIN_STOCKS[q] && /^[A-Za-z]/.test(r.name)) r.name = BUILTIN_STOCKS[q];
+  // 2. 查不到再呼叫 API
+  return _getTwseAll().then(function(list){
+    var found = null;
+    list.forEach(function(item){ if (item.Code===q) found=item; });
+    if (found) {
+      var r = {name:found.Name, code:q, price:parseFloat(found.ClosingPrice)||0};
       _stockCache[cacheKey] = {data:r, ts:Date.now()};
       return r;
     }
-    if (BUILTIN_STOCKS[q]) return {code:q, name:BUILTIN_STOCKS[q], price:0};
-    return null;
-  }).catch(function(){
-    if (BUILTIN_STOCKS[q]) return {code:q, name:BUILTIN_STOCKS[q], price:0};
-    return null;
-  });
+    return fetch("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
+      .then(function(r2){ return r2.ok ? r2.json() : []; })
+      .then(function(list2){
+        var found2 = null;
+        list2.forEach(function(item){ if (item.SecuritiesCompanyCode===q) found2=item; });
+        if (!found2) return null;
+        var r2 = {name:found2.CompanyAbbreviation||q, code:q, price:parseFloat(found2.Close)||0};
+        _stockCache[cacheKey] = {data:r2, ts:Date.now()};
+        return r2;
+      });
+  }).catch(function(){ return null; });
 }
 
 function fetchByName(name) {
   var q = (name||"").trim(); if (!q) return Promise.resolve(null);
-  var foundCode = null;
+  // 1. 先查內建清單
+  var builtinCode = null;
   Object.keys(BUILTIN_STOCKS).forEach(function(c){
-    if (!foundCode && BUILTIN_STOCKS[c].indexOf(q)>=0) foundCode=c;
+    if (!builtinCode && BUILTIN_STOCKS[c].indexOf(q)>=0) builtinCode=c;
   });
-  if (foundCode) return fetchByCode(foundCode);
-  return Promise.resolve(null);
+  if (builtinCode) {
+    return Promise.resolve({name: BUILTIN_STOCKS[builtinCode], code:builtinCode, price:0});
+  }
+  var cacheKey = "n_"+q;
+  if (_stockCache[cacheKey] && Date.now()-_stockCache[cacheKey].ts<3600000) {
+    return Promise.resolve(_stockCache[cacheKey].data);
+  }
+  // 2. 查不到再呼叫 API
+  return _getTwseAll().then(function(list){
+    var found = null;
+    list.forEach(function(item){
+      if (!found && item.Name && item.Name.indexOf(q)>=0) found=item;
+    });
+    if (found) {
+      var r = {name:found.Name, code:found.Code, price:parseFloat(found.ClosingPrice)||0};
+      _stockCache[cacheKey] = {data:r, ts:Date.now()};
+      return r;
+    }
+    return fetch("https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes")
+      .then(function(r2){ return r2.ok ? r2.json() : []; })
+      .then(function(list2){
+        var found2 = null;
+        list2.forEach(function(item){
+          if (!found2 && item.CompanyAbbreviation && item.CompanyAbbreviation.indexOf(q)>=0) found2=item;
+        });
+        if (!found2) return null;
+        var r2 = {name:found2.CompanyAbbreviation, code:found2.SecuritiesCompanyCode, price:parseFloat(found2.Close)||0};
+        _stockCache[cacheKey] = {data:r2, ts:Date.now()};
+        return r2;
+      });
+  }).catch(function(){ return null; });
 }
 
 
@@ -940,7 +975,7 @@ function TwStocksPage(props) {
     <Shell title="台股持倉" sub={"市值合計：$"+numFmt(twTotal)} onSave={handleSave}>
       <Card style={{background:t.primary+"12",border:"1px solid "+t.primary+"33",marginBottom:4}}>
         <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-          <div style={{display:"flex",flexDirection:"column",gap:2}}><p style={{fontSize:12,color:t.muted,margin:0}}>{updAt?"報價更新："+updAt+"（15分鐘延遲）":"輸入代號後離開欄位自動帶入名稱及報價"}</p><a href="https://tw.stock.yahoo.com" target="_blank" style={{fontSize:11,color:t.primary,textDecoration:"none"}}>📈 Yahoo股市查詢</a></div>
+          <p style={{fontSize:12,color:t.muted,margin:0}}>{updAt?"名稱更新："+updAt:"輸入代號後離開欄位自動帶入名稱"}</p>
           <div style={{display:"flex",gap:6}}>
             <Btn onClick={fetchAll} disabled={fetchingAll} size="sm"><RefreshCw size={13}/>{fetchingAll?"查詢中…":"全部帶入"}</Btn>
           </div>

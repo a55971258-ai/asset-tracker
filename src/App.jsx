@@ -869,7 +869,7 @@ function TwStocksPage(props) {
     var ratio=(it.marginRatio==null?60:it.marginRatio);
     var buyTotal=it.buyValue*it.shares*1000;
     var companyLoan=Math.round(buyTotal*(1-ratio/100)/1000)*1000;
-    var principal=it.principal>0?it.principal:(buyTotal*ratio/100);
+    var principal=it.principal>0?it.principal:Math.round(buyTotal*ratio/100);
     var pnl=mv-companyLoan-principal;
     return Object.assign({},it,{marketValue:mv,marginLoan:it.buyValue-it.principal,companyLoan:companyLoan,netValue:mv-companyLoan,pnl:pnl});
   }
@@ -878,9 +878,11 @@ function TwStocksPage(props) {
     var u=p.slice();
     var n=Object.assign({},u[i]);
     n[f]=v;
-    // 自動計算自備款 = 買進均價 × 張數 × 成數%
-    var ratio=(n.marginRatio==null?60:n.marginRatio);
-    n.principal=Math.round(n.buyValue*n.shares*ratio/100);
+    // 自動計算自備款 = 買進均價 × 張數 × 1000 × 成數%（只在非現價欄位變動時重算）
+    if (f !== "price") {
+      var ratio=(n.marginRatio==null?60:n.marginRatio);
+      n.principal=Math.round(n.buyValue*n.shares*1000*ratio/100);
+    }
     u[i]=recM(n);
     return u;
   });}
@@ -888,9 +890,12 @@ function TwStocksPage(props) {
   function updMMulti(i,fields){setMarginStocks(function(p){
     var u=p.slice();
     var n=Object.assign({},u[i],fields);
-    // 重新計算自備款
-    var ratio=(n.marginRatio==null?60:n.marginRatio);
-    n.principal=Math.round(n.buyValue*n.shares*ratio/100);
+    // 只有在不是純現價更新時才重算自備款
+    var onlyPrice = Object.keys(fields).length===1 && fields.price!==undefined;
+    if (!onlyPrice) {
+      var ratio=(n.marginRatio==null?60:n.marginRatio);
+      n.principal=Math.round(n.buyValue*n.shares*1000*ratio/100);
+    }
     u[i]=recM(n);
     return u;
   });}

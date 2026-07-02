@@ -1416,11 +1416,12 @@ function PieChartPage(props) {
                 <PieChart>
                   <Pie data={chartData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={2} dataKey="value"
                     label={function(p){
-                      if (p.percent < 0.04) return "";
+                      if (p.percent < 0.01) return "";
+                      if (p.percent < 0.03) return p.name;
                       return p.name+" "+(p.percent*100).toFixed(1)+"%";
                     }}
                     labelLine={{strokeWidth:0.8, stroke:"#88888866"}}
-                    fontSize={10}>
+                    fontSize={11}>
                     {chartData.map(function(e,i){return <Cell key={i} fill={e.color} stroke="transparent"/>;}) }
                   </Pie>
                   <Tooltip formatter={function(v){return ["$"+numFmt(v),"金額"];}} contentStyle={{background:t.card,border:"1px solid "+t.border,borderRadius:8,color:t.text,fontSize:12}}/>

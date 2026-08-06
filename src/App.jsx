@@ -1693,7 +1693,7 @@ function SettingsPage(props) {
   }
 
   return (
-    <React.Fragment>
+    <div style={{position:"relative"}}>
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
       <h1 style={{fontSize:22,fontWeight:700,color:t.text,margin:0}}>設定</h1>
 
@@ -1962,7 +1962,7 @@ function SettingsPage(props) {
         </div>
       </div>
     )}
-    </React.Fragment>
+    </div>
   );
 }
 

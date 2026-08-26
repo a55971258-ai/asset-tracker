@@ -135,7 +135,7 @@ function sbUpload(url, key, token, userId, data) {
   var base = sbCleanUrl(url);
   var payload = {data: data, updated_at: new Date().toISOString()};
   if (userId) payload.uid = userId;
-  return fetch(base+"/rest/v1/snapshots?on_conflict=uid", {
+  return fetch(base+"/rest/v1/asset_tracker_snapshots?on_conflict=uid", {
     method:"POST",
     headers:Object.assign({},sbHeaders(key,token),{"Prefer":"resolution=merge-duplicates","Content-Type":"application/json"}),
     body:JSON.stringify(payload)
@@ -153,7 +153,7 @@ function sbUpload(url, key, token, userId, data) {
 }
 function sbDownload(url, key, token) {
   var base = sbCleanUrl(url);
-  return fetch(base+"/rest/v1/snapshots?select=data,updated_at&limit=1", {
+  return fetch(base+"/rest/v1/asset_tracker_snapshots?select=data,updated_at&limit=1", {
     headers:sbHeaders(key,token)
   }).then(function(r){return r.ok?r.json():[];})
   .then(function(rows){return rows&&rows.length>0?rows[0]:null;});
